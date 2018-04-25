@@ -3,6 +3,8 @@
 
                            
 # function to get list of shared objects
+# private function do not export
+# only takes a single package name
 find_so <- function( package_name ) {
 
   check_pkgs <- installed.packages()
@@ -22,6 +24,52 @@ find_so <- function( package_name ) {
  
  check_shared
 } 
+
+
+###################################################
+#  ldd_dep_list
+#
+#  description: get ldd dep list
+#
+#  input:  a shared object (single path)
+#
+#  output: list of shared objects with path
+###################################################
+#  Notes:
+#
+#  ldd output example:
+#  linux-vdso.so.1 =>  (0x00007ffddd9f1000)
+#  libR.so => /usr/lib/libR.so (0x00007f2cd48fc000)
+#  /lib64/ld-linux-x86-64.so.2 (0x00007f2cd512d000)
+###################################################
+ldd_dep_list <- function( shared_object) {
+
+  # build otool cmd
+  ldd_cmd <- sprintf(" ldd %s", shared_object) 
+
+  # run the ldd cmd
+  ldd_out <- system( ldd_cmd,intern=TRUE )
+
+  # check if there is a kernel shared object listed
+  is_kern_so <- function(x) {grepl("linux-vdso.so.1",x) }
+  ldd_out <- ldd_out[ !sapply(ldd_out, is_kern_so) ]
+
+  # get file paths from ldd
+  get_paths <- function(x) gsub("^.*=>[ ]*","",gsub("\t","",gsub(" [(].*[)]$", "", x)))
+
+  # sanitize paths from ldd 
+  so_paths <- sapply( ldd_out, get_paths )
+  names(so_paths) <- NULL
+
+  # make sure we aren't chasing down symlinks
+  remove_symlinks <- function(x) system(sprintf("readlink -f %s",x),intern=TRUE)
+
+  so_paths <- sapply(so_paths, remove_symlinks)
+
+  so_paths
+}
+
+
 
 # get otool dep list
 otool_dep_list <- function( shared_object) {
@@ -47,6 +95,46 @@ otool_dep_list <- function( shared_object) {
 
   so_paths
 }
+
+
+
+
+# check if a package is installed, and it's version string
+dpkg_search <- function( shared_objects ) {
+
+  dpkg_versions <-c()
+  dpkg_names <-c()
+  dpkg_sos <- c() # handle multiple packages single file
+
+  for( shared_object in shared_objects) {
+   
+    dpkg_name <- NULL 
+    tryCatch({
+      dpkg_name <- system( sprintf("dpkg -S %s",shared_object),intern=TRUE,ignore.stderr=TRUE)
+    }, error=function(x) {
+    }, finally={}
+    )
+
+    if( is.null(dpkg_name) ) next
+
+    # get list of installed packages
+    dpkg_name <- sapply(dpkg_name, function(x) {b <- strsplit(x,': '); b[[1]][1]  } )
+    dpkg_version <- system( sprintf(" dpkg-query --showformat='${Version}' --show %s", dpkg_name),intern=TRUE)
+    
+    
+    names(dpkg_name) <- NULL
+    names(dpkg_version) <- NULL
+
+    dpkg_sos    <-  c(rep(shared_object,length(dpkg_name)), dpkg_sos) 
+    dpkg_names <- c(dpkg_name, dpkg_names) 
+    dpkg_versions <- c(dpkg_version, dpkg_versions) 
+  }
+  
+  result <- data.frame(shared_object=dpkg_sos, pkg_name=dpkg_names, pkg_version=dpkg_versions,stringsAsFactors=FALSE)
+
+  return( result )
+}
+
       
 
 # check if a package is installed, and it's version string
@@ -66,7 +154,13 @@ homebrew_search <- function( pkg ) {
 
 
 # function to create shared object data frame from a pkg
-pkg_dep <- function( pkg_names, verbose=TRUE ) {
+pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
+  
+  # handle operating system specific package lookups 
+  operating_system <- sessionInfo()$R.version$os
+  
+  # print OS
+  if( verbose ) cat(sprintf("os:  %s\n", operating_system))
     
   result <-c()
   for( pkg_name in pkg_names ) {
@@ -79,23 +173,33 @@ pkg_dep <- function( pkg_names, verbose=TRUE ) {
   
     # iterate over all shared objects
     for( target_so in target_sos ) { 
-      otool_dep_list( target_so )
-    
+      
+      if( grepl("darwin", operating_system)) {
+        dep_list=otool_dep_list( target_so)
+      } else if( grepl("linux", operating_system)) {
+        dep_list=ldd_dep_list( target_so)
+      } else {
+        stop("Unsupported Operating System")
+      }
+
       result <- rbind( result, 
         data.frame(
           r_package=pkg_name,
           operating_system=sessionInfo()$R.version$os,
-          shared_object=otool_dep_list( target_so),
+          shared_object=dep_list,
           shared_object_exists=FALSE,
           package_system="",
           package_version="",
           package_name="",
           stringsAsFactors=FALSE
+          )
         )
-      )
     }
   }
-  
+
+  # clear row names
+  rownames(result) <- NULL
+
   # exit early on no shared objects 
   if( length(result$shared_object) == 0) return(result) 
  
@@ -108,12 +212,9 @@ pkg_dep <- function( pkg_names, verbose=TRUE ) {
   # add T/F to the output
   result$shared_object_exists <- shared_object_exists
 
-  # handle operating system specific package lookups 
-  operating_system <- sessionInfo()$R.version$os
 
   # darwin and homebrew
   if( grepl("darwin", operating_system)) {
-    if( verbose ) cat(sprintf("os:  %s\n", operating_system))
       
     # check if homebrew is installed
     homebrew_out <- NULL
@@ -140,9 +241,6 @@ pkg_dep <- function( pkg_names, verbose=TRUE ) {
       homebrew_pkgs <- sapply(result[homebrew_files,"shared_object"],
         function(x) unlist(strsplit(gsub(homebrew_dir,"",x),'/'))[1])
      
-#debug
-homebrew_pkgs <<- homebrew_pkgs
-
       # append package names back to result 
       if( verbose ) cat("dependency searching...\n")
    
@@ -163,10 +261,38 @@ homebrew_pkgs <<- homebrew_pkgs
   
   # linux 
   if( grepl("linux", operating_system)) {
-    print('linux') 
+     
+    # need to handle dpkg vs rpm here at some point
+    # check /etc/issue and grep out Ubuntu/Debian etc... ?
+    
+      # append package names back to result 
+      if( verbose ) cat("dependency searching...\n")
+   
+      # get pkg names
+      dpkg_pkg_names <- dpkg_search(result$shared_object)
+
+      # remove duplicate names
+      dpkg_pkg_names <- dpkg_pkg_names[!duplicated(dpkg_pkg_names),]
+
+      # merge shared object info on
+      result <- merge( result, dpkg_pkg_names, by="shared_object")
+
+      # record package version
+      result[ , "package_version"] <- result$pkg_version
+
+      # record package name 
+      result[ , "package_name"] <- result$pkg_name
+
+      result$pkg_version <- NULL
+      result$pkg_name <- NULL
+      # record package system
+      result[nchar(result$package_version) > 0,"package_system"] <- "dpkg"     
   } 
 
-  result
+  # make sure the order is perserved when we return
+  result[,c('r_package','operating_system','shared_object',
+            'shared_object_exists','package_system','package_version',
+            'package_name')]
 }
 
 
@@ -179,13 +305,13 @@ upgrade_unresolved_r_pkgs <- FALSE
 # test to check all packages
 if( check_all_packages) {
   check_pkgs <- installed.packages()[,1]
-  shared_objects <- pkg_dep(check_pkgs) 
+  shared_objects <- pkg_dep_bin(check_pkgs) 
 }
 
 
 
 # find dependencies for a specific package
-utils_dep <- pkg_dep('rgdal')
+utils_dep <- pkg_dep_bin('rgdal')
 
 
 # check need to upgrade based on missing (upgraded) packages

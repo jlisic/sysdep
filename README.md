@@ -24,8 +24,8 @@ Finished:
  - Initial functions written.
 
 Todo:
- - Keg integration and testing.
- - Cask integraton and testing.
+ - Keg integration and testing (post initial release).
+ - Cask integraton and testing (post initial release).
 
 
 Ubuntu 18.04/16.04:
@@ -33,16 +33,19 @@ Ubuntu 18.04/16.04:
 
 Finished:
  - Initial dpkg testing.
+ - Initial functions written. 
 
 Todo:
- - Write R scripts. 
+ - Create a function to identify dev libraries associated with shared objects.
+ - Handle PPAs (post initial release). 
 
 
 Not Started:
 -----------
 
-- Centos 6/7x
-- SLES/LEAP
+ - RPM based distros: 
+   - Centos 6/7x
+   - SLES/LEAP
 
   
 
