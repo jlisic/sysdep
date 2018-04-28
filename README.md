@@ -10,9 +10,17 @@ General:
 
 Finsihed:
  - General framework for shared object detection.
+ 
+In progress 
+ - Web API for not installed packages - done
+   - Setup Nginx, MariaDB, and PHP server - done
+   - Setup database schema - done 
+   - Build scripts to populate server - 50%
+   - Populate server with bulk builds - tested
+   - Build PHP application
+   - Deploy to digital ocean
 
 Todo: 
- - Web API for not installed packages.
  - Move R scripts to a package.
  - Buld test infrastructure.
 
@@ -45,7 +53,7 @@ Not Started:
 
  - RPM based distros: 
    - Centos 6/7x
-   - SLES/LEAP
+   - SLES/LEAP (post initial release)
 
   
 
