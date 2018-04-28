@@ -16,11 +16,17 @@ find_so <- function( package_name ) {
                     check_pkg['Package'])
 
   check_shared <- list.files(lib_path) 
-
+  
   # return nothing if there are no files in lib path
   if( length(check_shared) < 1) return( c() )
+  
+  check_shared <- check_shared[sapply(check_shared, function(x) grepl("[.](so|dylib)$",x))]
+  
+  # return nothing if there are no files in lib path that are shared objects
+  if( length(check_shared) < 1) return( c() )
 
-  check_shared <- paste( lib_path, check_shared[sapply(check_shared, function(x) grepl("[.](so|dylib)$",x))],sep='/')
+
+  check_shared <- paste( lib_path, check_shared ,sep='/')
  
  check_shared
 } 
@@ -158,16 +164,22 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
   
   # handle operating system specific package lookups 
   operating_system <- sessionInfo()$R.version$os
+
+  # get version number from installed packages
+  installed_packages <- installed.packages()
   
   # print OS
   if( verbose ) cat(sprintf("os:  %s\n", operating_system))
-    
+   
+  # iterate through all package names 
   result <-c()
   for( pkg_name in pkg_names ) {
 
+    r_pkg_version <- installed_packages[pkg_name ==installed_packages[,'Package'],'Version']
+
     if( verbose ) cat(sprintf("%s\n", pkg_name))
     target_sos <- find_so(pkg_name)
-  
+ 
     # check if there are any dependencies
     if(length(target_sos) < 1) next 
   
@@ -185,6 +197,7 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
       result <- rbind( result, 
         data.frame(
           r_package=pkg_name,
+          r_package_version=r_pkg_version,
           operating_system=sessionInfo()$R.version$os,
           shared_object=dep_list,
           shared_object_exists=FALSE,
@@ -290,29 +303,30 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
   } 
 
   # make sure the order is perserved when we return
-  result[,c('r_package','operating_system','shared_object',
+  result[,c('r_package','r_package_version', 'operating_system','shared_object',
             'shared_object_exists','package_system','package_version',
             'package_name')]
 }
 
 
 # check all installed r packages
-check_all_packages <- FALSE
+check_all_packages <- TRUE 
 upgrade_unresolved_r_pkgs <- FALSE
-
+check_one <- FALSE 
 
 
 # test to check all packages
 if( check_all_packages) {
-  check_pkgs <- installed.packages()[,1]
+  check_pkgs <- installed.packages()[1:10,1]
   shared_objects <- pkg_dep_bin(check_pkgs) 
 }
 
 
 
 # find dependencies for a specific package
-utils_dep <- pkg_dep_bin('rgdal')
-
+if( check_one ) {
+  utils_dep <- pkg_dep_bin('A3')
+}
 
 # check need to upgrade based on missing (upgraded) packages
 if( upgrade_unresolved_r_pkgs ) {
@@ -326,8 +340,6 @@ if( upgrade_unresolved_r_pkgs ) {
 
   if( length(need_to_upgrade) > 0 ) install.packages(need_to_upgrade)
 }
-
-
 
 
 
