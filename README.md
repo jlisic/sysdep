@@ -15,9 +15,9 @@ In progress
  - Web API for not installed packages - done
    - Setup Nginx, MariaDB, and PHP server - done
    - Setup database schema - done 
-   - Build scripts to populate server - 50%
-   - Populate server with bulk builds - tested
-   - Build PHP application
+   - Build scripts to populate server - done 
+   - Populate server with bulk builds - done (homebrew only) 
+   - Build PHP application - in progress
    - Deploy to digital ocean
 
 Todo: 
