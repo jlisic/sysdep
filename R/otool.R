@@ -89,10 +89,15 @@ otool_dep_list <- function( shared_object) {
   # filter a by starting with a tab
   is_so <- function(x) {grepl("^\t",x) } 
 
+  # filter out some otool errors
+  is_valid_so <- function(x) {grepl(" is not an object file$",x)}
 
   # get file paths from otool
   file_paths <- otool_out[sapply( otool_out, is_so)]
+  file_paths <- file_paths[!sapply( file_paths, is_valid_so)]
   file_paths <- file_paths[-1]
+ 
+  if( length(file_paths) < 1) return(NULL) 
   get_paths <- function(x) gsub("\t","",gsub(" [(]comp.*[)]", "", x)) 
 
   # sanitize paths from otool
@@ -193,6 +198,9 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
       } else {
         stop("Unsupported Operating System")
       }
+
+      # handle invalid so (e.g. FastRWeb)
+      if( is.null(dep_list) ) next
 
       result <- rbind( result, 
         data.frame(
@@ -317,15 +325,16 @@ check_one <- FALSE
 
 # test to check all packages
 if( check_all_packages) {
-  check_pkgs <- installed.packages()[1:10,1]
+  check_pkgs <- installed.packages()[,1]
   shared_objects <- pkg_dep_bin(check_pkgs) 
+  save(shared_objects,file='/tmp/shared_objects.Rd')
 }
 
 
 
 # find dependencies for a specific package
 if( check_one ) {
-  utils_dep <- pkg_dep_bin('A3')
+  utils_dep <- pkg_dep_bin('FastRWeb')
 }
 
 # check need to upgrade based on missing (upgraded) packages
