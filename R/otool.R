@@ -157,10 +157,9 @@ homebrew_search <- function( pkg ) {
   rownames(a2) <- NULL
 
   # sanitize listing 
-  df2 <- data.frame(pkg_name=a2[,1], pkg_version=a2[,2],stringsAsFactors=FALSE)
+  df2 <- data.frame(package_name=a2[,1], package_version=a2[,2],stringsAsFactors=FALSE)
 
-  return( merge(data.frame(pkg_name=pkg,stringsAsFactors=FALSE), df2, by="pkg_name",all.x=TRUE)  )
-  
+  return( merge(pkg , df2, by="package_name",all.x=TRUE)  )
 }
 
 
@@ -253,26 +252,31 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
         homebrew_out[grepl("^HOMEBREW_PREFIX:",homebrew_out)]
         ))
 
+
       homebrew_files <- grepl(sprintf("^%s",homebrew_dir),result$shared_object)
       # if there is nothing to report, return 
       if( sum(homebrew_files) == 0) return(result) 
 
+      # create a subset of homebrew packages
+      homebrew_pkgs <- result[homebrew_files,c('r_package','shared_object')]
 
       # get likely homebrew packages
-      homebrew_pkgs <- sapply(result[homebrew_files,"shared_object"],
+      homebrew_pkgs$package_name <- sapply(homebrew_pkgs[,"shared_object"],
         function(x) unlist(strsplit(gsub(homebrew_dir,"",x),'/'))[1])
-     
+
       # append package names back to result 
       if( verbose ) cat("dependency searching...\n")
-   
+
       # get pkg names
       homebrew_pkg_names <- homebrew_search(homebrew_pkgs)
 
-      # record package version
-      result[ homebrew_files, "package_version"] <- homebrew_pkg_names$pkg_version
+     
+      result$package_name <- NULL
+      result$package_version <- NULL
 
-      # record package name 
-      result[ homebrew_files, "package_name"] <- homebrew_pkg_names$pkg_name
+      # record package version
+      result <- merge( result, homebrew_pkg_names, by=c("r_package","shared_object")) 
+
       # record package system
       result[nchar(result$package_version) > 0,"package_system"] <- "homebrew"     
 
@@ -318,9 +322,9 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
 
 
 # check all installed r packages
-check_all_packages <- TRUE 
+check_all_packages <-  FALSE 
 upgrade_unresolved_r_pkgs <- FALSE
-check_one <- FALSE 
+check_one <- TRUE 
 
 
 # test to check all packages
@@ -334,7 +338,8 @@ if( check_all_packages) {
 
 # find dependencies for a specific package
 if( check_one ) {
-  utils_dep <- pkg_dep_bin('FastRWeb')
+  #utils_dep <- pkg_dep_bin('FastRWeb')
+  utils_dep <- pkg_dep_bin(c( 'rgdal','sp','meanShiftR'))
 }
 
 # check need to upgrade based on missing (upgraded) packages
