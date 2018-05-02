@@ -16,8 +16,8 @@ In progress
    - Setup Nginx, MariaDB, and PHP server - done
    - Setup database schema - done 
    - Build scripts to populate server - done 
-   - Populate server with bulk builds - done (homebrew only) 
-   - Build PHP application - in progress
+   - Populate server with bulk builds - done (homebrew only) starting Ubuntu 16.04 
+   - Build PHP application - done  
    - Deploy to digital ocean
 
 Todo: 

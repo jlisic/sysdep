@@ -321,11 +321,77 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
 }
 
 
+
+
+
+# get interface
+get_sysdep <- function(
+  r_pkg_name,
+  r_pkg_version = "",
+  os_name,
+  os_detail,
+  r_version,
+  sys_pkg_system,
+  arch,
+  url="http://10.0.1.70/index.php"
+  ) {
+
+  if( length( r_pkg_name ) != 1 ) stop( "Sorry, get_sysdep only supports one package at a time.")
+
+  if( missing(os_name) ) os_name   <- sessionInfo()$R.version$os
+  if( missing(os_detail) ) os_detail <- sessionInfo()$running
+  os_version <- ""
+  if( missing(r_version) ) r_version <- paste0( sessionInfo()$R.version$major, '.', sessionInfo()$R.version$minor, collapse="")
+  if( missing( arch ) ) arch <- sessionInfo()$R.version$arch
+
+  if( missing(sys_pkg_system) ) {
+
+    if( grepl('darwin', os_name) ) {
+      sys_pkg_system <- 'homebrew'
+    } else if( grepl('linux', os_name) ) {
+      sys_pkg_system <- 'dpkg'
+    } else {
+      stop(sprint('Error: Unknown Operating System %s.',os_name))
+    }
+    
+  }
+
+  read_in <- sprintf("%s?r_pkg_name=%s&r_pkg_version=%s&os_name=%s&os_detail=%s&os_version=%s&r_version=%s&sys_pkg_system=%s&arch=%s",
+    url,
+    URLencode(r_pkg_name),
+    URLencode(r_pkg_version),
+    URLencode(os_name),
+    URLencode(os_detail),
+    URLencode(os_version),
+    URLencode(r_version),
+    URLencode(sys_pkg_system),
+    URLencode(arch)
+    )
+
+  tmp <- tempfile()
+
+  download.file( read_in, destfile=tmp, quiet=TRUE) 
+
+  result <- read.csv(tmp,stringsAsFactors=FALSE) 
+  colnames(result) <- c('r_pkg_name','r_pkg_version','os_name','os_version','os_detail','r_version', 'sys_pkg_system','arch','sys_pkg_name','sys_pkg_version','build_time','type','success','notes')
+  unlink(tmp)
+  return(result)
+
+}
+
+
+
+########################## TEST ##############################
+
+
+
+
+
 # check all installed r packages
 check_all_packages <-  FALSE 
-upgrade_unresolved_r_pkgs <- FALSE
-check_one <- TRUE 
-
+upgrade_unresolved_r_pkgs <- FALSE 
+check_one <- FALSE  
+web_api <- TRUE
 
 # test to check all packages
 if( check_all_packages) {
@@ -355,6 +421,11 @@ if( upgrade_unresolved_r_pkgs ) {
   if( length(need_to_upgrade) > 0 ) install.packages(need_to_upgrade)
 }
 
+if( web_api ) {
+  print( get_sysdep('rgdal')  )
+  print( get_sysdep('ggplot2') )
+  print( get_sysdep('RcppArmadillo') )
+}
 
 
 
