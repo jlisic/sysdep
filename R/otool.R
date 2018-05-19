@@ -54,11 +54,17 @@ ldd_dep_list <- function( shared_object) {
   ldd_cmd <- sprintf(" ldd %s", shared_object) 
 
   # run the ldd cmd
-  ldd_out <- system( ldd_cmd,intern=TRUE )
+  suppressWarnings( 
+  ldd_out <- system( ldd_cmd,intern=TRUE ,ignore.stderr=TRUE)
+  )
+  # check if it is a shared object
+  if( sum(grepl("not a dynamic executable",ldd_out)) > 0 ) return(NULL)
 
   # check if there is a kernel shared object listed
-  is_kern_so <- function(x) {grepl("linux-vdso.so.1",x) }
+  is_kern_so <- function(x) {grepl("(linux-vdso.so.1|statically link)",x) }
   ldd_out <- ldd_out[ !sapply(ldd_out, is_kern_so) ]
+
+  if(length(ldd_out) < 1) return(NULL)
 
   # get file paths from ldd
   get_paths <- function(x) gsub("^.*=>[ ]*","",gsub("\t","",gsub(" [(].*[)]$", "", x)))
@@ -84,7 +90,7 @@ otool_dep_list <- function( shared_object) {
   otool_cmd <- sprintf("otool -L %s", shared_object) 
 
   # run the otool cmd
-  otool_out <- system( otool_cmd,intern=TRUE )
+  otool_out <- system( otool_cmd,intern=TRUE , ignore.stderr=TRUE)
 
   # filter a by starting with a tab
   is_so <- function(x) {grepl("^\t",x) } 
@@ -183,7 +189,8 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
 
     if( verbose ) cat(sprintf("%s\n", pkg_name))
     target_sos <- find_so(pkg_name)
- 
+
+
     # check if there are any dependencies
     if(length(target_sos) < 1) next 
   
@@ -200,6 +207,7 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
 
       # handle invalid so (e.g. FastRWeb)
       if( is.null(dep_list) ) next
+
 
       result <- rbind( result, 
         data.frame(
@@ -222,7 +230,7 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
 
   # exit early on no shared objects 
   if( length(result$shared_object) == 0) return(result) 
- 
+
   # check if the shared objects exist  
   shared_object_exists <-sapply(result$shared_object,file.exists)
 
@@ -388,16 +396,16 @@ get_sysdep <- function(
 
 
 # check all installed r packages
-check_all_packages <-  FALSE 
+check_all_packages <- FALSE 
 upgrade_unresolved_r_pkgs <- FALSE 
-check_one <- FALSE  
-web_api <- TRUE
+check_one <- TRUE 
+web_api <- FALSE
 
 # test to check all packages
 if( check_all_packages) {
   check_pkgs <- installed.packages()[,1]
   shared_objects <- pkg_dep_bin(check_pkgs) 
-  save(shared_objects,file='/tmp/shared_objects.Rd')
+  save(shared_objects,file='/tmp/shared_objects_linux.Rd')
 }
 
 
@@ -405,7 +413,8 @@ if( check_all_packages) {
 # find dependencies for a specific package
 if( check_one ) {
   #utils_dep <- pkg_dep_bin('FastRWeb')
-  utils_dep <- pkg_dep_bin(c( 'rgdal','sp','meanShiftR'))
+  #utils_dep <- pkg_dep_bin('AssotesteR')
+  utils_dep <- pkg_dep_bin(c( 'rgdal','sp','meanShiftR','saAlloc','FastRWeb','AssotesteR'))
 }
 
 # check need to upgrade based on missing (upgraded) packages
