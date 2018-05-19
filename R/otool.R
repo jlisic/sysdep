@@ -7,6 +7,8 @@
 # only takes a single package name
 find_so <- function( package_name ) {
 
+  if( length(package_name) > 1 ) warning("Only the first package name will be evaluated.")
+
   check_pkgs <- installed.packages()
 
   check_pkg <- check_pkgs[which(check_pkgs[,1] == package_name ),]
@@ -49,6 +51,9 @@ find_so <- function( package_name ) {
 #  /lib64/ld-linux-x86-64.so.2 (0x00007f2cd512d000)
 ###################################################
 ldd_dep_list <- function( shared_object) {
+  
+  if( length(shared_object) > 1 ) warning("Only the first shared object will be evaluated.")
+  shared_object <- shared_object[1]
 
   # build otool cmd
   ldd_cmd <- sprintf(" ldd %s", shared_object) 
@@ -85,6 +90,9 @@ ldd_dep_list <- function( shared_object) {
 
 # get otool dep list
 otool_dep_list <- function( shared_object) {
+  
+  if( length(shared_object) > 1 ) warning("Only the first shared object will be evaluated.")
+  shared_object <- shared_object[1]
 
   # build otool cmd
   otool_cmd <- sprintf("otool -L %s", shared_object) 
@@ -289,7 +297,6 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
       result[nchar(result$package_version) > 0,"package_system"] <- "homebrew"     
 
     }
-
   }
   
   # linux 
@@ -308,7 +315,7 @@ pkg_dep_bin <- function( pkg_names, verbose=TRUE ) {
       dpkg_pkg_names <- dpkg_pkg_names[!duplicated(dpkg_pkg_names),]
 
       # merge shared object info on
-      result <- merge( result, dpkg_pkg_names, by="shared_object")
+      result <- merge( result, dpkg_pkg_names, by="shared_object", sort=FALSE)
 
       # record package version
       result[ , "package_version"] <- result$pkg_version
