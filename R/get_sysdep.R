@@ -45,7 +45,10 @@
 #' When no dependencies are found, NULL is returned. 
 #' 
 #' @examples
+#' \dontrun{
 #' get_sysdep('rgdal')
+#' }
+#' @export
 get_sysdep <-
 function(
   r_pkg_name,
@@ -73,21 +76,21 @@ function(
     } else if( grepl('linux', os_name) ) {
       sys_pkg_system <- 'dpkg'
     } else {
-      stop(sprint('Error: Unknown Operating System %s.',os_name))
+      stop(sprintf('Error: Unknown Operating System %s.',os_name))
     }
     
   }
 
   read_in <- sprintf("%s?r_pkg_name=%s&r_pkg_version=%s&os_name=%s&os_detail=%s&os_version=%s&r_version=%s&sys_pkg_system=%s&arch=%s",
     url,
-    URLencode(r_pkg_name),
-    URLencode(r_pkg_version),
-    URLencode(os_name),
-    URLencode(os_detail),
-    URLencode(os_version),
-    URLencode(r_version),
-    URLencode(sys_pkg_system),
-    URLencode(arch)
+    utils::URLencode(r_pkg_name),
+    utils::URLencode(r_pkg_version),
+    utils::URLencode(os_name),
+    utils::URLencode(os_detail),
+    utils::URLencode(os_version),
+    utils::URLencode(r_version),
+    utils::URLencode(sys_pkg_system),
+    utils::URLencode(arch)
     )
 
   tmp <- tempfile()

@@ -7,5 +7,6 @@ Description: Provides a means to examine dependencies of installed packages
   using shared objects.  Dependencies may also be identified through an
   online database. 
 Depends: R (>= 3.3.0)
-License: BSD-2 
+License: BSD 2-clause License + file LICENSE
 LazyData: true
+RoxygenNote: 6.0.1

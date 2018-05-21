@@ -29,6 +29,7 @@
 #' 
 #' @examples
 #' pkg_dep_bin(c('stats','utils'))
+#' @export
 pkg_dep_bin <-
 function( pkg_names, verbose=TRUE ) {
   
@@ -58,9 +59,9 @@ function( pkg_names, verbose=TRUE ) {
     for( target_so in target_sos ) { 
       
       if( grepl("darwin", operating_system)) {
-        dep_list=sysdep::.otool_dep_list( target_so)
+        dep_list=.otool_dep_list( target_so)
       } else if( grepl("linux", operating_system)) {
-        dep_list=sysdep::.ldd_dep_list( target_so)
+        dep_list=.ldd_dep_list( target_so)
       } else {
         stop("Unsupported Operating System")
       }
@@ -136,7 +137,7 @@ function( pkg_names, verbose=TRUE ) {
       if( verbose ) cat("dependency searching...\n")
 
       # get pkg names
-      homebrew_pkg_names <- sysdep::.homebrew_search(homebrew_pkgs)
+      homebrew_pkg_names <- .homebrew_search(homebrew_pkgs)
 
      
       result$package_name <- NULL
@@ -161,7 +162,7 @@ function( pkg_names, verbose=TRUE ) {
       if( verbose ) cat("dependency searching...\n")
    
       # get pkg names
-      dpkg_pkg_names <- sysdep::.dpkg_search(result$shared_object)
+      dpkg_pkg_names <- .dpkg_search(result$shared_object)
 
       # remove duplicate names
       dpkg_pkg_names <- dpkg_pkg_names[!duplicated(dpkg_pkg_names),]

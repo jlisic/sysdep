@@ -13,7 +13,7 @@
 #'   the function records an empty array.
 #' @examples
 #' find_so('utils')
-#'
+#' @export
 find_so <-
 function( package_name ) {
 
