@@ -1,6 +1,6 @@
-
-# function to get installed package dependencies
-get_dev_dep <- function() { 
+# internal function - not officially used
+.get_dev_dep <-
+function() { 
 
 
   dpkg_output <- tempfile()
@@ -8,7 +8,7 @@ get_dev_dep <- function() {
   system(sprintf("dpkg-query -W -f='${binary:Package}, ${Version}, ${Architecture}, ${binary:Summary}\n' > %s", dpkg_output))
   
   
-  dpkg_installed_df <- read.csv( dpkg_output, stringsAsFactors=FALSE, header=FALSE, quote="",strip.white=TRUE) 
+  dpkg_installed_df <- utils::read.csv( dpkg_output, stringsAsFactors=FALSE, header=FALSE, quote="",strip.white=TRUE) 
   
   unlink(dpkg_output)
   
