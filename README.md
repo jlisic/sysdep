@@ -8,7 +8,7 @@ Progress:
 General:
 -----------
 
-Finsihed:
+Finished:
  - General framework for shared object detection.
  
 In progress 
